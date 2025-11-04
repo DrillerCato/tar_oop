@@ -1,0 +1,789 @@
+import React, { useState, useEffect } from 'react';
+
+// 模拟存储（实际部署时可换成真实数据库）
+const storage = {
+  users: {},
+  moodData: [],
+  calendarMoods: {}
+};
+
+export default function MindShield() {
+  const [currentPage, setCurrentPage] = useState('landing');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [moodScore, setMoodScore] = useState(50);
+  const [journalEntry, setJournalEntry] = useState('');
+  const [calendar, setCalendar] = useState([]);
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedMood, setSelectedMood] = useState('');
+  const [dayNote, setDayNote] = useState('');
+  const [location, setLocation] = useState(null);
+
+  // 初始化演示账户
+  useEffect(() => {
+    storage.users['student@test.com'] = { name: 'Demo Student', password: 'student123', role: 'student' };
+    storage.users['counselor@test.com'] = { name: 'Demo Counselor', password: 'counselor123', role: 'counselor' };
+    storage.users['admin@test.com'] = { name: 'Demo Admin', password: 'admin123', role: 'admin' };
+    initCalendar();
+  }, []);
+
+  // 获取用户位置
+  const getUserLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('浏览器不支持定位功能'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const loc = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          };
+          setLocation(loc);
+          resolve(loc);
+        },
+        (error) => {
+          reject(error);
+        }
+      );
+    });
+  };
+
+  // 紧急报警功能
+  const handleEmergencyAlert = async () => {
+    const confirmed = window.confirm(
+      '这将通知您的紧急联系人和辅导员，并尝试获取您的位置信息。是否继续？\n' +
+      'This will notify your emergency contacts and counselor, and attempt to get your location. Continue?'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // 获取GPS位置
+      const userLocation = await getUserLocation();
+      
+      // 构建报警信息
+      const alertData = {
+        user: currentUser?.name || 'Anonymous',
+        timestamp: new Date().toISOString(),
+        location: userLocation,
+        type: 'mental_health_emergency'
+      };
+
+      // 模拟发送到服务器
+      console.log('Emergency Alert Sent:', alertData);
+
+      // 生成Google Maps链接
+      const mapsUrl = `https://www.google.com/maps?q=${userLocation.latitude},${userLocation.longitude}`;
+
+      // 显示成功消息
+      alert(
+        `🚨 紧急警报已发送！\n\n` +
+        `📍 您的位置：\n` +
+        `纬度: ${userLocation.latitude.toFixed(6)}\n` +
+        `经度: ${userLocation.longitude.toFixed(6)}\n` +
+        `精度: ${userLocation.accuracy.toFixed(0)}米\n\n` +
+        `✅ 已通知：\n` +
+        `- 紧急联系人\n` +
+        `- 学校辅导员\n` +
+        `- 心理健康团队\n\n` +
+        `查看地图: ${mapsUrl}`
+      );
+
+      // 实际应用中，这里会调用真实的API
+      // await fetch('/api/emergency', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(alertData)
+      // });
+
+    } catch (error) {
+      alert(
+        `⚠️ 获取位置失败: ${error.message}\n\n` +
+        `但紧急警报仍已发送给您的联系人。\n` +
+        `如需立即帮助，请拨打：\n` +
+        `🇲🇾 Malaysia: 03-7956 8145 (Befrienders)\n` +
+        `🇺🇸 USA: 988 (Suicide & Crisis Lifeline)\n` +
+        `🌍 International: www.opencounseling.com`
+      );
+    }
+  };
+
+  const handleRegister = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const email = formData.get('email');
+    const name = formData.get('name');
+    const password = formData.get('password');
+    const role = formData.get('role');
+
+    if (storage.users[email]) {
+      alert('邮箱已被注册！Email already registered!');
+      return;
+    }
+
+    storage.users[email] = { name, password, role };
+    alert('注册成功！请登录。Registration successful! Please login.');
+    setCurrentPage('login');
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const email = formData.get('email');
+    const password = formData.get('password');
+
+    const user = storage.users[email];
+    if (!user || user.password !== password) {
+      alert('邮箱或密码错误！Invalid email or password!');
+      return;
+    }
+
+    setCurrentUser({ email, ...user });
+    setCurrentPage(user.role + 'Portal');
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    setCurrentPage('landing');
+  };
+
+  const devLogin = (role) => {
+    const users = {
+      student: { email: 'dev@student.com', name: 'Dev Student', role: 'student' },
+      counselor: { email: 'dev@counselor.com', name: 'Dev Counselor', role: 'counselor' },
+      admin: { email: 'dev@admin.com', name: 'Dev Admin', role: 'admin' }
+    };
+    setCurrentUser(users[role]);
+    setCurrentPage(role + 'Portal');
+  };
+
+  const submitMoodScore = () => {
+    const data = {
+      score: moodScore,
+      timestamp: new Date().toLocaleString(),
+      user: currentUser?.email
+    };
+    storage.moodData.push(data);
+    alert(`已提交: 心情分数 ${moodScore} (Mood score ${moodScore} submitted)`);
+  };
+
+  const saveJournal = () => {
+    if (!journalEntry.trim()) {
+      alert('请先写点什么！Please write something first!');
+      return;
+    }
+    alert('日记已保存 (Journal saved)');
+    setJournalEntry('');
+  };
+
+  const initCalendar = () => {
+    const today = new Date();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    setCalendar(days);
+  };
+
+  const openMoodModal = (day) => {
+    const today = new Date();
+    const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${day}`;
+    setSelectedDate(dateKey);
+    
+    const existing = storage.calendarMoods[dateKey];
+    if (existing) {
+      setSelectedMood(existing.mood);
+      setDayNote(existing.note || '');
+    } else {
+      setSelectedMood('');
+      setDayNote('');
+    }
+    
+    setShowMoodModal(true);
+  };
+
+  const saveMoodEntry = () => {
+    if (!selectedMood) {
+      alert('请选择一个心情！Please select a mood!');
+      return;
+    }
+    
+    storage.calendarMoods[selectedDate] = { mood: selectedMood, note: dayNote };
+    alert('心情已保存！Mood saved! 💚');
+    setShowMoodModal(false);
+    setSelectedMood('');
+    setDayNote('');
+  };
+
+  // 渲染页面
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'landing':
+        return (
+          <div className="landing">
+            <h1>🛡️ Mind Shield</h1>
+            <p>Your Mental Health Support Platform</p>
+            <div className="btn-group">
+              <button className="btn btn-primary" onClick={() => setCurrentPage('login')}>Login</button>
+              <button className="btn btn-secondary" onClick={() => setCurrentPage('register')}>Sign Up</button>
+            </div>
+            <div style={{ marginTop: '60px', opacity: 0.3 }}>
+              <p style={{ fontSize: '0.9em' }}>🔧 Dev Quick Access:</p>
+              <div className="btn-group">
+                <button className="btn btn-secondary btn-small" onClick={() => devLogin('student')}>Student</button>
+                <button className="btn btn-secondary btn-small" onClick={() => devLogin('counselor')}>Counselor</button>
+                <button className="btn btn-secondary btn-small" onClick={() => devLogin('admin')}>Admin</button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'login':
+        return (
+          <div className="auth-container">
+            <button className="btn btn-back" onClick={() => setCurrentPage('landing')}>← Back</button>
+            <h2>🛡️ Login to Mind Shield</h2>
+            <form onSubmit={handleLogin}>
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" name="email" required />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required />
+              </div>
+              <button type="submit" className="btn btn-primary btn-full">Login</button>
+            </form>
+            <div className="link-text">
+              Don't have an account? <a onClick={() => setCurrentPage('register')}>Sign Up</a>
+            </div>
+          </div>
+        );
+
+      case 'register':
+        return (
+          <div className="auth-container">
+            <button className="btn btn-back" onClick={() => setCurrentPage('landing')}>← Back</button>
+            <h2>🛡️ Create Account</h2>
+            <form onSubmit={handleRegister}>
+              <div className="form-group">
+                <label>Full Name</label>
+                <input type="text" name="name" required />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" name="email" required />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required minLength="6" />
+              </div>
+              <div className="form-group">
+                <label>Role</label>
+                <select name="role" required>
+                  <option value="">Select Role</option>
+                  <option value="student">🎓 Student</option>
+                  <option value="counselor">🧑🏫 Counselor</option>
+                  <option value="admin">🛠️ Administrator</option>
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary btn-full">Create Account</button>
+            </form>
+            <div className="link-text">
+              Already have an account? <a onClick={() => setCurrentPage('login')}>Login</a>
+            </div>
+          </div>
+        );
+
+      case 'studentPortal':
+        return (
+          <div>
+            <div className="portal-header">
+              <h2>🎓 Student Dashboard</h2>
+              <div className="user-info">
+                <span>{currentUser?.name}</span>
+                <button className="btn-logout" onClick={logout}>Logout</button>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3>📆 今日情绪打卡 (Daily Mood Check-in)</h3>
+              <div className="mood-value">{moodScore}</div>
+              <input 
+                type="range" 
+                className="mood-slider" 
+                min="1" 
+                max="100" 
+                value={moodScore}
+                onChange={(e) => setMoodScore(e.target.value)}
+              />
+              <button className="btn btn-primary btn-full" onClick={submitMoodScore}>
+                提交心情打分 (Submit)
+              </button>
+            </div>
+
+            <div className="card">
+              <h3>📔 情绪日记 (Mood Journal)</h3>
+              <textarea 
+                value={journalEntry}
+                onChange={(e) => setJournalEntry(e.target.value)}
+                rows="4"
+                placeholder="How are you feeling today? Write your thoughts..."
+              />
+              <button className="btn btn-primary btn-full" onClick={saveJournal}>
+                保存日记 (Save)
+              </button>
+            </div>
+
+            <div className="card">
+              <h3>🌼 My Healing Mood Calendar</h3>
+              <div className="calendar">
+                {calendar.map(day => (
+                  <div 
+                    key={day}
+                    className="calendar-day"
+                    onClick={() => openMoodModal(day)}
+                  >
+                    <div className="day-number">{day}</div>
+                    {storage.calendarMoods[`${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`] && (
+                      <div className="day-emoji">
+                        {storage.calendarMoods[`${new Date().getFullYear()}-${new Date().getMonth() + 1}-${day}`].mood}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3>🚨 紧急求助 (Emergency Help)</h3>
+              <p>If you're in crisis or need immediate support, please reach out.</p>
+              <button className="btn emergency-btn" onClick={handleEmergencyAlert}>
+                🚨 紧急报警 (Emergency Alert with GPS)
+              </button>
+              {location && (
+                <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+                  📍 Current Location: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'counselorPortal':
+        return (
+          <div>
+            <div className="portal-header">
+              <h2>🧑🏫 Counselor Dashboard</h2>
+              <div className="user-info">
+                <span>{currentUser?.name}</span>
+                <button className="btn-logout" onClick={logout}>Logout</button>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3>🔔 高风险学生提醒 (High-Risk Student Alerts)</h3>
+              <ul className="alert-list">
+                <li className="alert-item high-risk">Student A - Mood score consistently below 30 for 5 days</li>
+                <li className="alert-item high-risk">Student B - Emergency alert triggered</li>
+                <li className="alert-item">Student C - Missed 3 consecutive check-ins</li>
+              </ul>
+            </div>
+          </div>
+        );
+
+      case 'adminPortal':
+        return (
+          <div>
+            <div className="portal-header">
+              <h2>🛠️ Admin Dashboard</h2>
+              <div className="user-info">
+                <span>{currentUser?.name}</span>
+                <button className="btn-logout" onClick={logout}>Logout</button>
+              </div>
+            </div>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-number">{Object.keys(storage.users).length}</div>
+                <div className="stat-label">Total Users</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{storage.moodData.length}</div>
+                <div className="stat-label">Mood Entries</div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="container">
+      <style jsx>{`
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        .container {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          min-height: 100vh;
+          padding: 20px;
+        }
+
+        .landing {
+          text-align: center;
+          color: white;
+          padding: 60px 20px;
+        }
+
+        .landing h1 {
+          font-size: 3.5em;
+          margin-bottom: 20px;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .landing p {
+          font-size: 1.3em;
+          margin-bottom: 40px;
+        }
+
+        .btn-group {
+          display: flex;
+          gap: 20px;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .btn {
+          padding: 15px 40px;
+          font-size: 1.1em;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: transform 0.2s;
+          font-weight: 600;
+        }
+
+        .btn:hover {
+          transform: translateY(-2px);
+        }
+
+        .btn-primary {
+          background: white;
+          color: #667eea;
+        }
+
+        .btn-secondary {
+          background: transparent;
+          color: white;
+          border: 2px solid white;
+        }
+
+        .btn-small {
+          font-size: 0.9em;
+          padding: 10px 20px;
+        }
+
+        .btn-back {
+          position: absolute;
+          top: 20px;
+          left: 20px;
+          padding: 8px 16px;
+          background: transparent;
+          color: #667eea;
+          border: 2px solid #667eea;
+        }
+
+        .auth-container {
+          max-width: 450px;
+          margin: 60px auto;
+          background: white;
+          padding: 40px;
+          border-radius: 15px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          position: relative;
+        }
+
+        .auth-container h2 {
+          color: #667eea;
+          margin-bottom: 30px;
+          text-align: center;
+        }
+
+        .form-group {
+          margin-bottom: 20px;
+        }
+
+        .form-group label {
+          display: block;
+          margin-bottom: 8px;
+          color: #333;
+          font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+          width: 100%;
+          padding: 12px;
+          border: 2px solid #e0e0e0;
+          border-radius: 6px;
+          font-size: 1em;
+        }
+
+        .btn-full {
+          width: 100%;
+          margin-top: 10px;
+        }
+
+        .link-text {
+          text-align: center;
+          margin-top: 20px;
+          color: #666;
+        }
+
+        .link-text a {
+          color: #667eea;
+          cursor: pointer;
+          text-decoration: underline;
+        }
+
+        .portal-header {
+          background: white;
+          padding: 20px;
+          border-radius: 10px;
+          margin-bottom: 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .portal-header h2 {
+          color: #667eea;
+        }
+
+        .user-info {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        }
+
+        .btn-logout {
+          background: #ff6b6b;
+          color: white;
+          padding: 8px 20px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+
+        .card {
+          background: white;
+          padding: 25px;
+          border-radius: 10px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+          color: #333;
+          margin-bottom: 15px;
+        }
+
+        .mood-value {
+          font-size: 2em;
+          color: #667eea;
+          font-weight: bold;
+          text-align: center;
+          margin: 10px 0;
+        }
+
+        .mood-slider {
+          width: 100%;
+          height: 8px;
+          border-radius: 5px;
+          margin: 20px 0;
+        }
+
+        textarea {
+          width: 100%;
+          padding: 12px;
+          border: 2px solid #e0e0e0;
+          border-radius: 6px;
+          font-family: inherit;
+          resize: vertical;
+        }
+
+        .emergency-btn {
+          background: #ff4757;
+          color: white;
+          width: 100%;
+          padding: 15px;
+          font-size: 1.2em;
+          margin-top: 10px;
+        }
+
+        .calendar {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 10px;
+          margin: 20px 0;
+        }
+
+        .calendar-day {
+          background: #f8f9fa;
+          padding: 15px;
+          border-radius: 8px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          min-height: 60px;
+        }
+
+        .calendar-day:hover {
+          background: #e9ecef;
+          transform: scale(1.05);
+        }
+
+        .day-number {
+          font-size: 1.2em;
+          font-weight: bold;
+        }
+
+        .day-emoji {
+          font-size: 1.5em;
+          margin-top: 5px;
+        }
+
+        .alert-list {
+          list-style: none;
+        }
+
+        .alert-item {
+          padding: 15px;
+          background: #fff3cd;
+          border-left: 4px solid #ffc107;
+          margin-bottom: 10px;
+          border-radius: 5px;
+        }
+
+        .alert-item.high-risk {
+          background: #f8d7da;
+          border-left-color: #dc3545;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
+        .stat-card {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 20px;
+          border-radius: 10px;
+          text-align: center;
+        }
+
+        .stat-number {
+          font-size: 2.5em;
+          font-weight: bold;
+        }
+
+        .stat-label {
+          font-size: 0.9em;
+          opacity: 0.9;
+        }
+      `}</style>
+
+      {renderPage()}
+
+      {showMoodModal && (
+        <div className="mood-modal" onClick={() => setShowMoodModal(false)}>
+          <div className="mood-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Select Your Mood</h2>
+            <div className="emoji-selector">
+              {['😊', '😐', '😢', '😡', '🥰'].map(emoji => (
+                <span
+                  key={emoji}
+                  className={`emoji ${selectedMood === emoji ? 'selected' : ''}`}
+                  onClick={() => setSelectedMood(emoji)}
+                >
+                  {emoji}
+                </span>
+              ))}
+            </div>
+            <textarea
+              value={dayNote}
+              onChange={(e) => setDayNote(e.target.value)}
+              placeholder="Write what happened today..."
+              rows="4"
+            />
+            <div style={{ marginTop: '15px' }}>
+              <button className="btn btn-primary" onClick={saveMoodEntry}>Save</button>
+              <button className="btn btn-secondary" onClick={() => setShowMoodModal(false)} style={{ marginLeft: '10px' }}>Cancel</button>
+            </div>
+
+            <style jsx>{`
+              .mood-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+              }
+
+              .mood-card {
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+              }
+
+              .emoji-selector {
+                display: flex;
+                justify-content: space-around;
+                margin: 20px 0;
+              }
+
+              .emoji {
+                font-size: 2.5em;
+                cursor: pointer;
+                transition: transform 0.2s;
+                padding: 10px;
+                border-radius: 10px;
+              }
+
+              .emoji:hover {
+                transform: scale(1.2);
+              }
+
+              .emoji.selected {
+                background: #667eea;
+                transform: scale(1.3);
+              }
+            `}</style>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
