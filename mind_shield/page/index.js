@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-// 模拟存储（实际部署时可换成真实数据库）
 const storage = {
   users: {},
   moodData: [],
@@ -19,7 +18,6 @@ export default function MindShield() {
   const [dayNote, setDayNote] = useState('');
   const [location, setLocation] = useState(null);
 
-  // 初始化演示账户
   useEffect(() => {
     storage.users['student@test.com'] = { name: 'Demo Student', password: 'student123', role: 'student' };
     storage.users['counselor@test.com'] = { name: 'Demo Counselor', password: 'counselor123', role: 'counselor' };
@@ -27,11 +25,10 @@ export default function MindShield() {
     initCalendar();
   }, []);
 
-  // 获取用户位置
   const getUserLocation = () => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error('浏览器不支持定位功能'));
+        reject(new Error('不支持定位'));
         return;
       }
 
@@ -52,20 +49,17 @@ export default function MindShield() {
     });
   };
 
-  // 紧急报警功能
   const handleEmergencyAlert = async () => {
     const confirmed = window.confirm(
-      '这将通知您的紧急联系人和辅导员，并尝试获取您的位置信息。是否继续？\n' +
+      '将通知紧急联系人和辅导员，并获取位置信息。继续？\n' +
       'This will notify your emergency contacts and counselor, and attempt to get your location. Continue?'
     );
 
     if (!confirmed) return;
 
     try {
-      // 获取GPS位置
       const userLocation = await getUserLocation();
-      
-      // 构建报警信息
+
       const alertData = {
         user: currentUser?.name || 'Anonymous',
         timestamp: new Date().toISOString(),
@@ -73,16 +67,13 @@ export default function MindShield() {
         type: 'mental_health_emergency'
       };
 
-      // 模拟发送到服务器
       console.log('Emergency Alert Sent:', alertData);
 
-      // 生成Google Maps链接
       const mapsUrl = `https://www.google.com/maps?q=${userLocation.latitude},${userLocation.longitude}`;
 
-      // 显示成功消息
       alert(
-        `🚨 紧急警报已发送！\n\n` +
-        `📍 您的位置：\n` +
+        `🚨 已发送！\n\n` +
+        `📍 位置：\n` +
         `纬度: ${userLocation.latitude.toFixed(6)}\n` +
         `经度: ${userLocation.longitude.toFixed(6)}\n` +
         `精度: ${userLocation.accuracy.toFixed(0)}米\n\n` +
@@ -93,21 +84,13 @@ export default function MindShield() {
         `查看地图: ${mapsUrl}`
       );
 
-      // 实际应用中，这里会调用真实的API
-      // await fetch('/api/emergency', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(alertData)
-      // });
 
     } catch (error) {
       alert(
         `⚠️ 获取位置失败: ${error.message}\n\n` +
-        `但紧急警报仍已发送给您的联系人。\n` +
+        `紧急警报已发送给联系人。\n` +
         `如需立即帮助，请拨打：\n` +
-        `🇲🇾 Malaysia: 03-7956 8145 (Befrienders)\n` +
-        `🇺🇸 USA: 988 (Suicide & Crisis Lifeline)\n` +
-        `🌍 International: www.opencounseling.com`
+        `🇲🇾 Malaysia: 03-7956 8145 (Befrienders)\n`
       );
     }
   };
@@ -121,7 +104,7 @@ export default function MindShield() {
     const role = formData.get('role');
 
     if (storage.users[email]) {
-      alert('邮箱已被注册！Email already registered!');
+      alert('已被注册！Email already registered!');
       return;
     }
 
@@ -173,10 +156,10 @@ export default function MindShield() {
 
   const saveJournal = () => {
     if (!journalEntry.trim()) {
-      alert('请先写点什么！Please write something first!');
+      alert('写什么啊！Please write something first!');
       return;
     }
-    alert('日记已保存 (Journal saved)');
+    alert('已保存 (Journal saved)');
     setJournalEntry('');
   };
 
@@ -206,18 +189,17 @@ export default function MindShield() {
 
   const saveMoodEntry = () => {
     if (!selectedMood) {
-      alert('请选择一个心情！Please select a mood!');
+      alert('选择心情！Please select a mood!');
       return;
     }
     
     storage.calendarMoods[selectedDate] = { mood: selectedMood, note: dayNote };
-    alert('心情已保存！Mood saved! 💚');
+    alert('已保存！Mood saved! 💚');
     setShowMoodModal(false);
     setSelectedMood('');
     setDayNote('');
   };
 
-  // 渲染页面
   const renderPage = () => {
     switch (currentPage) {
       case 'landing':
