@@ -1,0 +1,47 @@
+User
+-Attributes: id, name, email, role
+
+-Methods: +getId(), +getName(), +getEmail(), +toString()
+
+Student (subclass from user)
+-Attributes: programme, department, 
+projects : List<Project>
+
+-Methods: +createProject(…), +getProjects(), +sendRequest(Project, Lecturer, String)
+
+Lecturer (subclass from user)
+-Attributes: department, backgrounds : List<String> (e.g. ["IT","Data Science"]), researchAreas, inbox : List<Request>, supervisees : List<Project>, maxSupervisees
+
+-Methods: +viewInbox(), +acceptRequest(Request), +declineRequest(Request,String), +hasCapacity(), +getBackgrounds()
+
+Admin (subclass from user)
+-Attributes:  (manages collections via StorageManager)
+
+-Methods: +addLecturer(Lecturer), +removeLecturer(int), +viewAllUsers(), +viewAllProjects()
+
+Project
+-Attributes: id, owner : Student, title, description, tags : List<String>, status : ProjectStatus (DRAFT, PENDING, ASSIGNED, COMPLETED), assignment : Assignment (nullable), milestones : List<Milestone>
+
+-Methods: +addMilestone(Milestone), +getMilestones(), +setStatus(ProjectStatus)
+
+Request
+-Attributes: id, project : Project, requester : Student, targetLecturer : Lecturer, message, status : RequestStatus (PENDING, ACCEPTED, DECLINED, EXPIRED), createdAt, expiresAt
+
+-Methods: +setStatus(RequestStatus), +getStatus()
+
+Assignment
+-Attributes: id, project : Project, lecturer : Lecturer, assignedAt, active : boolean
+
+-Methods: +deactivate(), +isActive()
+
+Milestone
+-Attributes: id, title, description, dueDate, status : MilestoneStatus (NOT_SUBMITTED, SUBMITTED, GRADED), submissionPath, grade
+
+-Methods: +markSubmitted(String), +setGrade(double)
+
+StorageManager
+-Attributes: storagePath
+-Methods: +saveAll(…), +loadAll(), +saveProjects(…)
+
+-ConsoleUI / MainMenu
+-Methods: +start(), +showLoginMenu(), +showStudentMenu(Student), +showLecturerMenu(Lecturer), +showAdminMenu(Admin)

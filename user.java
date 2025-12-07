@@ -1,39 +1,46 @@
-public abstract class User {
+class User {
 
-    private String username;
-    private String password;
+    private String id;
+    private String name;
     private String email;
+    private String password;
+    private String role;
     
-    public User(String username, String password, String email) {
-        this.username = username;
-        this.password = password;
+    public User(String id, String name, String email, String password, String role) {
+        this.id = id;
+        this.name = name;
         this.email = email;
-    }
-    
-    //
-    public String getUsnm() {
-        return username;
-    }
-
-    public String getPswd() {
-        return password;
-    }
-    
-    public String getEmail() {
-        return email;
-    }
-    
-    public void setUsnm(String username) {
-        this.username = username;
-    }
-
-    public void setPswd(String password) {
         this.password = password;
+        this.role = role;
     }
-
-    public void setEmail(String email) {
-        this.email = email;
+    
+    public String getId() { 
+        return id; 
     }
-
-    public abstract String getRole();
+    public String getName() { 
+        return name; 
+    }
+    public String getEmail() { 
+        return email; }
+    public String getPassword() { 
+        return password; 
+    }
+    public String getRole() { 
+        return role; 
+    }
+    
+    public void setName(String name) { 
+        this.name = name; 
+    }
+    public void setEmail(String email) { 
+        this.email = email; 
+    }
+    public void setPassword(String password) { 
+        this.password = password; 
+    }
+    
+    @Override
+    public String toString() {
+        return "ID: " + id + " | Name: " + name + " | Email: " + email + " | Role: " + role;
+    }
 }

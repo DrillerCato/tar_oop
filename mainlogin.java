@@ -119,4 +119,3 @@ public class MainLogin extends JFrame {
         SwingUtilities.invokeLater(() -> new MainLogin());
     }
 }
-
